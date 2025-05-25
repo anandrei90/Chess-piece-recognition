@@ -1,11 +1,15 @@
 import numpy as np
 from PIL import Image
-import os 
+import os
+import sys
 
 """ 
 Script used to generate images showing a chess piece
 placed on a chessboard square and/or empty chessboard squares.
 """
+# get the dir where the script is
+WORKING_DIR = sys.path[0]
+
 # create a random number generator object
 # for reproducibilty purposes
 
@@ -44,22 +48,38 @@ def split_board(board_img):
     return list_of_squares
     
 
-
-def save_empty_squares(img_list, save_path):
+def generate_empty_squares():
     '''
-    Function that saves several images at a given
-    path. 
+    Function that ...
         
     Parameters
     ----------
-    
-    img_list: list of pillow images
-        List of 50*50 pixel chessboard square images.
-    save_path: string
-        Path where images are saved.
+    None
+   
+    Returns
+    -------
+    None
     '''
-    pass
+    # set dir where empty squares are saved
+    empty_squares_dir = os.path.join(WORKING_DIR, "empty_squares")
+    if not os.path.isdir(empty_squares_dir):
+        os.mkdir(empty_squares_dir)
+    # get image paths from boards directory
+    boards_dir = os.path.join(WORKING_DIR, "boards")
+    board_image_names = os.listdir(boards_dir)
+    board_image_paths = [os.path.join(boards_dir, name) for name in board_image_names]
 
+    # save all 64 squares of each board in a separate dir
+    for i, board_img in enumerate(board_image_paths):
+        with Image.open(board_img) as img:
+            list_of_squares = split_board(img)
+            # print(list_of_squares[0])
+            for j, square in enumerate(list_of_squares):
+                dir = os.path.join(empty_squares_dir, f"{i+1}")
+                if not os.path.isdir(dir):
+                    os.mkdir(dir)
+                save_path = os.path.join(dir, f'{j+1}.png')
+                square.save(save_path)
 
 
 def overlay_images(front_img, back_img):
@@ -82,3 +102,5 @@ def overlay_images(front_img, back_img):
     
     pass
 
+if __name__ == "__main__":
+    generate_empty_squares()
