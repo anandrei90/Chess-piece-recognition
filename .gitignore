@@ -176,3 +176,4 @@ cython_debug/
 
 # data
 backend/src/dataset_generation/empty_squares
+backend/src/data
