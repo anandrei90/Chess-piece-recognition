@@ -41,8 +41,8 @@ def split_board(board_img):
     if image_arr.shape != (400,400,4):
         raise ValueError("Image does not have the correct shape (400x400 pixels, RGBA).")
     # reshape array to (64,50,50,4)
-    reshaped = image_arr.reshape(8,50,8,50,4)
-    reshaped = reshaped.swapaxes(1,2)
+    reshaped = image_arr.reshape(8,50,8,50,4) 
+    reshaped = reshaped.swapaxes(1,2) # => (8,8,50,50,4)
     reshaped = reshaped.reshape(64,50,50,4)
     # convert to list of images
     list_of_squares = [Image.fromarray(reshaped[i,:,:,:]) for i in range(reshaped.shape[0])]
@@ -108,13 +108,20 @@ def generate_dataset(n_data_points, mode):
 
     Parameters
     ----------
+    n_data_points: positive int
+        Number of images to be generated.
     mode: {“train”, “test”, “mixed”}
         Specifies which piece styles will be used in data generation.
         
     Returns
     -------
     None
-    '''   
+    '''
+    #TODO: make this function smaller: 
+    #   - write the folder structure generation in a different function
+    #   - write the image generator as a class, like the numpy random no gen? 
+    #     e.g. folder structure generation could be a method
+    #     
     
     # specify piece and empty square dir
     pieces_path = os.path.join(WORKING_DIR, "pieces")
@@ -133,7 +140,7 @@ def generate_dataset(n_data_points, mode):
     for path in data_paths_pieces:
         if not os.path.isdir(path):
             os.makedirs(path)
-    # data directories for empty squares
+    # data directory for empty squares
     data_path_empty_squares = os.path.join(dir_up, "data", "e")
     if not os.path.isdir(data_path_empty_squares):
             os.makedirs(data_path_empty_squares)
@@ -182,13 +189,6 @@ def generate_dataset(n_data_points, mode):
             save_path = os.path.join(data_path_empty_squares, f'{i}.png')
 
         square_img.save(save_path)
-
-
-    # example code to superimpose piece on square
-    #image = Image.open(square_path).convert('RGBA')
-    #piece_img = Image.open(piece_path).convert('RGBA')
-    #
-    #image.save(save_path)
 
 
 
