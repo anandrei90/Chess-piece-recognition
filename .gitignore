@@ -132,8 +132,7 @@ celerybeat.pid
 .venv
 env/
 venv/
-backend/venv
-backend/.chess_venv
+backend/.venv
 ENV/
 env.bak/
 venv.bak/
@@ -174,3 +173,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# data
+backend/src/dataset_generation/empty_squares
+backend/src/data
