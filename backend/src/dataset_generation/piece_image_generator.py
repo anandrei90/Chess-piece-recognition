@@ -1,8 +1,8 @@
 import numpy as np
 from PIL import Image
 import os
+from glob import glob
 import sys
-import time
 
 """ 
 Script used to generate images showing a chess piece
@@ -10,12 +10,36 @@ placed on a chessboard square and/or empty chessboard squares.
 
 NB: bishop from piece set #8 looks strange af
 """
-# get the dir where the script is
+####################### define directory paths as constants #######################
+
 WORKING_DIR = sys.path[0]
+
+# dir tree where empty squares will be saved
+EMPTY_SQUARES_PATH = os.path.join(WORKING_DIR, "empty_squares")
+
+# get (sorted) board image paths (i.e. paths to all png's in /boards dir)
+BOARD_IMAGE_PATHS = glob(os.path.join(WORKING_DIR, "boards", "*"))
+# BOARD_IMAGE_PATHS = sorted(BOARD_IMAGE_PATHS, key=lambda x: os.path.basename(x))
+
+# dir where piece images are stored
+PIECES_PATH = os.path.join(WORKING_DIR, "pieces")
+
+# piece names (they are the same regardless of folder)
+PIECE_NAMES = [name[:-4] for name in os.listdir(os.path.join(PIECES_PATH, "1"))]
+# add empty square class to list
+PIECE_NAMES.insert(0,'e')
+
+# create data directory structure
+DATA_PATHS = [os.path.join(WORKING_DIR, os.pardir, "data", name) for name in PIECE_NAMES]
+
+
+####################### instantiate random number generator #######################
 
 # create a random number generator object
 # for reproducibilty purposes
 rng = np.random.default_rng(seed=35)
+
+####################### split board in 64 squares #######################
 
 def split_board(board_img):
     '''
@@ -49,12 +73,13 @@ def split_board(board_img):
     
     return list_of_squares
     
+####################### generate and save empty square images #######################
 
 def generate_empty_squares():
     '''
     Function that splits each empty chess board image into its
     64 squares and saves the empty squares in a separate directory
-    per chess board style. Example: for chess board style no. 14,
+    for each chess board style. Example: for chess board style no. 14,
     the empty square images will be saved in the directory
     ./dataset_generation/empty_squares/14, under the names 1.png,
     2.png, ..., 64.png.
@@ -68,25 +93,15 @@ def generate_empty_squares():
     None
     '''
 
-    # create dir where empty squares are saved
-    empty_squares_path = os.path.join(WORKING_DIR, "empty_squares")
-    if not os.path.isdir(empty_squares_path):
-        os.mkdir(empty_squares_path)
-    
-    # get image paths from boards directory
-    boards_path = os.path.join(WORKING_DIR, "boards")
-    board_image_paths = [os.path.join(boards_path, name) for name in os.listdir(boards_path)]
-    
-    # sort board image paths
-    board_image_paths = sorted(board_image_paths, key=lambda x: os.path.basename(x))
+
     
     # save all 64 squares of each board in a separate dir per board
-    for i, board_img in enumerate(board_image_paths):
+    for i, board_img in enumerate(BOARD_IMAGE_PATHS):
         
         # create a directory for each board style
-        board_style_path = os.path.join(empty_squares_path, f"{i+1}")
+        board_style_path = os.path.join(EMPTY_SQUARES_PATH, f"{i+1}")
         if not os.path.isdir(board_style_path):
-            os.mkdir(board_style_path)
+            os.makedirs(board_style_path)
         
         # open board image, decompose it in squares
         with Image.open(board_img) as img:
@@ -95,9 +110,30 @@ def generate_empty_squares():
         # save each chess square image from a given board 
         # in the created dir
         for j, square in enumerate(list_of_squares):
-            save_path = os.path.join(dir, f'{j+1}.png')
+            save_path = os.path.join(board_style_path, f'{j+1}.png')
             square.save(save_path)
 
+####################### create folder structure for data #######################
+
+def create_data_folder_structure():
+    '''
+    Function that generates the structure of the folder where
+    the data is stored.
+
+    Parameters
+    ----------
+    None
+        
+    Returns
+    -------
+    None
+    ''' 
+
+    for path in DATA_PATHS:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+
+####################### generate and save dataset images #######################
 
 def generate_dataset(n_data_points, mode):
     '''
@@ -110,94 +146,69 @@ def generate_dataset(n_data_points, mode):
     ----------
     n_data_points: positive int
         Number of images to be generated.
-    mode: {“train”, “test”, “mixed”}
+    mode: {“train”, “test”, “all”}
         Specifies which piece styles will be used in data generation.
         
     Returns
     -------
     None
-    '''
-    #TODO: make this function smaller: 
-    #   - write the folder structure generation in a different function
-    #   - write the image generator as a class, like the numpy random no gen? 
-    #     e.g. folder structure generation could be a method
-    #     
-    
-    # specify piece and empty square dir
-    pieces_path = os.path.join(WORKING_DIR, "pieces")
-    empty_squares_path = os.path.join(WORKING_DIR, "empty_squares")
-
-    # piece names (they are the same regardless of folder, 
-    # so just choose first folder)
-    piece_names = os.listdir(os.path.join(pieces_path, "1"))
-    # remove .png from the end
-    piece_names = [name[:-4] for name in piece_names]
-
-    # create data directory structure
-    dir_up = os.path.dirname(WORKING_DIR) # go up one level
-    # data directories for pieces
-    data_paths_pieces = [os.path.join(dir_up, "data", name) for name in piece_names]
-    for path in data_paths_pieces:
-        if not os.path.isdir(path):
-            os.makedirs(path)
-    # data directory for empty squares
-    data_path_empty_squares = os.path.join(dir_up, "data", "e")
-    if not os.path.isdir(data_path_empty_squares):
-            os.makedirs(data_path_empty_squares)
-      
+    '''   
+  
     # select range for random number generator such that
     # a specific subset of piece styles can be chosen
     if mode == 'train':
-        range_tuple = (1,17) # first 16 board sets
+        range_slice = slice(0,16) # first 16 piece sets
     elif mode == 'test':
-        range_tuple = (17,33) # last 16 board sets
-    elif mode == 'mixed':
-        range_tuple = (1,33) # all 32 board sets
+        range_slice = slice(16,32) # last 16 piece sets
+    elif mode == 'all':
+        range_slice = slice(0,32) # all 32 piece sets
     else:
         raise ValueError(f"{mode} is not a valid option for the mode parameter. \
-                         Use train, test, or mixed instead.")
+                         Use train, test, or all instead.")
+
+    # store all empty square paths in a list
+    all_empty_squares = glob(os.path.join(EMPTY_SQUARES_PATH, "*", "*"))
+    # store paths to every piece set in a list
+    piece_sets = glob(os.path.join(PIECES_PATH, "*"))
+    # select subset of piece sets according to selected mode
+    piece_sets = sorted(piece_sets)[range_slice] # sorted for reproducibility
 
     # generate pieces superimposed on squares
     for i in range(int(n_data_points)):
+
+        # randomly pick a piece or an empty square
+        piece_path = rng.choice(DATA_PATHS)
+
+        # path where image is going to be saved
+        save_path = os.path.join(piece_path, f"{i}.png")
+
+        # select random empty square
+        empty_square = rng.choice(all_empty_squares)
         
-        # generate random integers to select piece & board style
-        piece_set_id = str(rng.integers(*range_tuple))
-        board_id = str(rng.integers(1,29)) # 28 board sets
-        
-        # open square image
-        square_id = str(rng.integers(1,65)) # 64 sqaures/board
-        square_path = os.path.join(empty_squares_path, board_id, f'{square_id}.png')
-        square_img = Image.open(square_path).convert('RGBA')
-
-        # create piece + square or empty square image
-        # use prob(empty_square) = prob(a_given_piece) = 1/13
-        decider = 13 * rng.uniform()
-        if decider > 1:
-            # open piece image
-            # select randomly a piece (12 piece types)
-            piece_id = rng.integers(len(piece_names))
-            piece_name = piece_names[piece_id]
-            piece_path = os.path.join(pieces_path, piece_set_id, piece_name + '.png')
-            piece_img = Image.open(piece_path).convert('RGBA')
-            # specify path where image should be saved
-            save_path = data_paths_pieces[piece_id]
-            save_path = os.path.join(save_path, f'{i}.png')
-            # paste piece on top of empty square
-            square_img.paste(piece_img, mask=piece_img)
-        else:
-            # empty square saved in data/e
-            save_path = os.path.join(data_path_empty_squares, f'{i}.png')
-
-        square_img.save(save_path)
-
-
+        # create the empty square / piece image
+        with Image.open(empty_square).convert('RGBA') as img:
+            if piece_path[-1] == 'e':
+                pass
+            else:
+                # randomly select a piece set
+                piece_set = rng.choice(piece_sets)
+                # last 3 chars of piece path are the piece name, e.g. r_w
+                piece_name = piece_path[-3:]
+                # open piece image
+                piece_image_path = os.path.join(piece_set, piece_name + ".png")
+                with Image.open(piece_image_path).convert('RGBA') as piece:
+                    # paste piece on top of empty square
+                    img.paste(piece, mask=piece)
+                
+            # save resulting image
+            img.save(save_path)
+     
+####################### pack all functions together #######################
+def main():
+    generate_empty_squares()
+    create_data_folder_structure()
+    generate_dataset(n_data_points = 10000, mode = 'train')
 
 if __name__ == "__main__":
-    # generate_empty_squares()
-
-    # 10000 images => 53.9 MB
-    start = time.time()
-    generate_dataset(n_data_points = 10000, mode = 'train')
-    print(time.time() - start) 
-    # 0.8 - 0.9 sec for 1000 images
-    # ~5.8 sec for 10000 images
+    # 10000 images => 53.9 MB, ~5.8 sec
+    main()
