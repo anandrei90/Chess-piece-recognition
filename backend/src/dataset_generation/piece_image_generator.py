@@ -8,7 +8,7 @@ import sys
 Script used to generate images showing a chess piece
 placed on a chessboard square and/or empty chessboard squares.
 
-NB: bishop from piece set #8 looks strange af
+NB: bishop from piece set #8 looks strange
 """
 ####################### define directory paths as constants #######################
 
@@ -58,6 +58,7 @@ def split_board(board_img):
     '''
     
     # convert to RGBA
+    # [RGBA needed in order to superimpose the piece image on the square image]
     board_img = board_img.convert('RGBA')
     # convert image to array with shape = (400,400,4)  
     image_arr = np.asarray(board_img)
